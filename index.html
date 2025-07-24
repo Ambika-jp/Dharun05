@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🎥 Video to PDF - Direct Download</title>
+  <style>
+    body {
+      background: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #00ffc8;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+    video {
+      width: 90%;
+      max-width: 600px;
+      margin-top: 20px;
+      border-radius: 10px;
+    }
+    #status {
+      margin-top: 15px;
+      font-weight: bold;
+      color: #00ffc8;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎥 Video to PDF Converter</h1>
+
+  <input type="file" id="videoUpload" accept="video/*" />
+  <br>
+  <video id="video" controls></video>
+  <br>
+  <button onclick="processVideoToPDF()">Convert and Download PDF</button>
+  <canvas id="canvas" hidden></canvas>
+  <div id="status">📂 Upload a video to begin...</div>
+
+  <!-- jsPDF Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const status = document.getElementById('status');
+
+    document.getElementById('videoUpload').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      const url = URL.createObjectURL(file);
+      video.src = url;
+    });
+
+    async function processVideoToPDF() {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF();
+      const frameRate = 1; // 1 frame per second
+      const duration = Math.floor(video.duration);
+      let firstPage = true;
+
+      status.innerText = '⏳ Processing... Creating PDF...';
+
+      for (let t = 0; t < duration; t += frameRate) {
+        video.currentTime = t;
+        await new Promise(resolve => {
+          video.onseeked = () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+            if (!firstPage) pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 10, 10, 190, 120);
+            firstPage = false;
+            resolve();
+          };
+        });
+        await new Promise(r => setTimeout(r, 300));
+      }
+
+      // 👇 Auto-trigger PDF download
+      pdf.save("video_frames.pdf");
+
+      // ✅ Download success message
+      status.innerText = "✅ PDF downloaded to your device!";
+    }
+  </script>
+
+</body>
+</html>
